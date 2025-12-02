@@ -14,7 +14,7 @@ namespace e_Factura
         public List<ItemFactura> Items { get; set; } // Lista de la clase items en la factura
         public NCF NCF { get; set; } // clase ncf
         public decimal PorcentajeDescuento { get; set; }
-        // Propiedades calculadas
+        // Propiedades calculadas, uso de lambda y LINQ 
         public decimal Subtotal => Items.Sum(i => i.Subtotal); // Suma de los subtotales de los items
         public decimal TotalITBIS => Items.Sum(i => i.ITBIS);// Suma del ITBIS de los items
         public decimal Descuento => Subtotal * (PorcentajeDescuento / 100);// Calculo del descuento
