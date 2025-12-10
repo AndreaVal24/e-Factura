@@ -26,35 +26,73 @@ namespace e_Factura
             Console.Write("Nombre del cliente: ");
             string nombre = Console.ReadLine();
 
-            Console.Write("RNC o Cédula: ");
-            string identificacion = Console.ReadLine();
+            bool llevaComprobante = false;
 
-            // Validar tipo de identificación
-            int tipoId;
-            do
+            while (true)
             {
-                Console.Write("Tipo de identificación (1=RNC, 2=Cédula): ");
-            } while (!int.TryParse(Console.ReadLine(), out tipoId) || (tipoId != 1 && tipoId != 2));
+                Console.Write("¿Factura lleva Comprobante Fiscal? (s/n): ");
+                string op = Console.ReadLine()?.ToLower();
 
-            TipoIdentificacion tipoIdentificacion =
-                tipoId == 1 ? TipoIdentificacion.RNC : TipoIdentificacion.Cedula;
+                if (op == "s")
+                {
+                    llevaComprobante = true;
+                    break;
+                }
+                else if (op == "n")
+                {
+                    llevaComprobante = false;
+                    break;
+                }
+                else
+                {
+                    Colores.Error("Debe escribir 's' o 'n'.");
+                }
+            }
 
-            // Validaciones
-            if (tipoIdentificacion == TipoIdentificacion.RNC && !identificacion.ValidarRNC())
-                throw new RNCInvalidoException();
+            Cliente cliente;
 
-            if (tipoIdentificacion == TipoIdentificacion.Cedula && !identificacion.ValidarCedula())
-                throw new RNCInvalidoException();
+            string identificacion;
+           
+            // Si lleva comprobante, pedir RNC o Cédula
+            if (llevaComprobante)
+            {
+                Console.Write("RNC o Cédula: ");
+                 identificacion = Console.ReadLine();
 
-            Cliente cliente = new Cliente(nombre, identificacion, tipoIdentificacion);
+                // Validar tipo de identificación
+                int tipoId;
+                do
+                {
+                    Console.Write("Tipo de identificación (1=RNC, 2=Cédula): ");
+                } while (!int.TryParse(Console.ReadLine(), out tipoId) || (tipoId != 1 && tipoId != 2));
+
+                TipoIdentificacion tipoIdentificacion =
+                    tipoId == 1 ? TipoIdentificacion.RNC : TipoIdentificacion.Cedula;
+
+                // Validaciones
+                if (tipoIdentificacion == TipoIdentificacion.RNC && !identificacion.ValidarRNC())
+                    throw new RNCInvalidoException();
+
+                if (tipoIdentificacion == TipoIdentificacion.Cedula && !identificacion.ValidarCedula())
+                    throw new RNCInvalidoException(); 
+
+                cliente = new Cliente(nombre, identificacion, tipoIdentificacion);
+            }
+            else
+            {
+                // Sin comprobante fiscal - cliente sin identificación
+                cliente = new Cliente(nombre, null, TipoIdentificacion.Cedula);
+                Colores.Info("Factura sin comprobante fiscal.");
+            }
 
             Factura factura = new Factura(numeroFacturaActual++, cliente);
             facturas.Add(factura);
 
             Colores.Exito("Factura creada correctamente.");
             return factura;
-        }
 
+        }
+        
         // =============================
         // 2. Agregar productos
         // =============================
@@ -127,11 +165,38 @@ namespace e_Factura
         // =============================
         public void CalcularTotales(Factura factura)
         {
-            Colores.Titulo("\n--- TOTALES DE LA FACTURA ---");
-            Console.WriteLine($"Subtotal: {factura.Subtotal:C}");
-            Console.WriteLine($"ITBIS: {factura.TotalITBIS:C}");
-            Console.WriteLine($"Descuento: {factura.Descuento:C}");
-            Console.WriteLine($"TOTAL A PAGAR: {factura.Total:C}");
+            // Mostrar NCF si existe
+            if (factura.NCF != null)
+                Console.WriteLine($"NCF: {factura.NCF.NumeroCompleto}");
+            else
+                Console.WriteLine("NCF: (No asignado)");
+
+            // Mostrar RNC o Cédula del cliente
+           if (!string.IsNullOrEmpty(factura.Cliente.RncCedula))
+                Console.WriteLine($"RNC/Cédula: {factura.Cliente.RncCedula}");
+           else
+               Console.WriteLine("RNC/Cédula: (No aplica)");
+
+            Console.WriteLine($"\nCliente: {factura.Cliente.Nombre}");
+
+            // Mostrar productos de la factura
+            Console.WriteLine(
+                    "-  Descripcion  |  Cantidad  |  Precio  |  Subotal  |  ITBIS  |  Total  "
+                );
+            foreach (var item in factura.Items)
+            {
+                Console.WriteLine(
+                    $"- {item.Descripcion} |  {item.Cantidad} | " + $" RD{item.Precio:C} | RD{(item.Precio * item.Cantidad):C} " +
+                    $"| RD{item.ITBIS:C} | RD{item.Total:C}"
+                );
+            }
+
+            // Totales
+            //Console.WriteLine("\nResumen de Totales:");
+            //Console.WriteLine($"Subtotal: RD{factura.Subtotal:C}");
+            Console.WriteLine($"ITBIS: RD{factura.TotalITBIS:C}");
+            Console.WriteLine($"Descuento: RD{factura.Descuento:C}");
+            Console.WriteLine($"TOTAL A PAGAR: RD{factura.Total:C}");
         }
 
         // =============================
@@ -174,6 +239,7 @@ namespace e_Factura
         public void GuardarFactura(Factura factura)
         {
             Colores.Exito("\nFactura guardada correctamente (simulado).");
+            
         }
 
         // =============================

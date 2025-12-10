@@ -80,6 +80,7 @@ namespace e_Factura
                                 Colores.Error("Debe crear una factura primero.");
                             else
                                 acciones.GuardarFactura(facturaActual);
+                            facturaActual = null;
                             break;
 
                         case 7:
