@@ -292,14 +292,14 @@ namespace e_Factura
 
             Colores.Titulo("\n--- APLICAR DESCUENTO ---");
 
-            decimal descuento;
-            do
-            {
-                Console.Write("Porcentaje de descuento: ");
-            } while (!decimal.TryParse(Console.ReadLine(), out descuento));
+            //TODO Func<decimal, decimal> para aplicar descuento
+            Func<decimal, decimal> aplicarDescuento = (subtotal) => subtotal * (facturaEnProceso.PorcentajeDescuento / 100);
 
-            facturaEnProceso.PorcentajeDescuento = descuento;
+          
 
+            decimal montoDescuento = aplicarDescuento(facturaEnProceso.Subtotal);
+           
+            facturaEnProceso.Descuento = montoDescuento;
             Colores.Exito("Descuento aplicado.");
         }
 
@@ -405,17 +405,23 @@ namespace e_Factura
                 Colores.Error("\n❌ No se puede guardar una factura sin productos.");
                 return;
             }
-            Colores.Exito("\nFactura guardada correctamente (simulado).");
-            
+            //TODO Action<Factura> para callback cuando se guarda
+            Action<Factura> onFacturaGuardada = (f) =>
+            {
+                Colores.Exito($"\n✓ Factura #{f.NumeroFactura} guardada correctamente.");
+                Colores.Info($"  Cliente: {f.Cliente.Nombre}");
+                Colores.Info($"  Total: {f.Total:C}");
+                Colores.Info($"  Productos: {f.Items.Count}");
+                if (f.NCF != null)
+                    Colores.Info($"  NCF: {f.NCF.NumeroCompleto}");
+
+                Console.WriteLine($"  Guardado en: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            };
+
             facturas.Add(facturaEnProceso);
 
-            Colores.Exito($"\n✓ Factura #{facturaEnProceso.NumeroFactura} guardada correctamente.");
-            Colores.Info($"  Cliente: {facturaEnProceso.Cliente.Nombre}");
-            Colores.Info($"  Total: {facturaEnProceso.Total:C}");
-            Colores.Info($"  Productos: {facturaEnProceso.Items.Count}");
-
-            if (facturaEnProceso.NCF != null)
-                Colores.Info($"  NCF: {facturaEnProceso.NCF.NumeroCompleto}");
+            // Ejecutar el callback Action
+            onFacturaGuardada(facturaEnProceso);
 
             facturaEnProceso = null; // Limpiar
 
@@ -465,6 +471,7 @@ namespace e_Factura
                 {
                     f.NumeroFactura,
                     Cliente = f.Cliente.Nombre,
+                    f.Items.Count,
                     Total = f.Total
                 })
                 .ToList();
@@ -476,7 +483,7 @@ namespace e_Factura
             }
 
             foreach (var f in resumen)
-                Console.WriteLine($"Factura {f.NumeroFactura} - Cliente: {f.Cliente} - Total: {f.Total:C}");
+                Console.WriteLine($"Factura {f.NumeroFactura} - Cliente: {f.Cliente} - Productos: {f.Count} - Total: {f.Total:C}");
         }
     }
 }

@@ -9,7 +9,9 @@ namespace e_Factura
         {
             // Instancia del menu de acciones
             MenuAcciones acciones = new MenuAcciones();
-            Factura facturaActual = null; // Factura en curso de la clase factura
+
+            // Instancia del menu de acciones
+            ItemFactura itemfactura; 
 
             // Bucle del menu principal
             while (true)
@@ -78,6 +80,7 @@ namespace e_Factura
                                 Console.WriteLine($"  Fecha: {encontrada.Fecha:dd/MM/yyyy HH:mm}");
                                 Console.WriteLine($"  Total: {encontrada.Total:C}");
                                 Console.WriteLine($"  Productos: {encontrada.Items.Count}");
+                                
                                 if (encontrada.NCF != null)
                                     Console.WriteLine($"  NCF: {encontrada.NCF.NumeroCompleto}");
                             }
