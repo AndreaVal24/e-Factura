@@ -10,6 +10,7 @@ namespace e_Factura
     {
         private List<Factura> facturas = new List<Factura>();
         private int numeroFacturaActual = 1;
+        public Factura facturaEnProceso { get; private set; }
 
         // Secuencias NCF simuladas
         private long secuenciaB01 = 1;
@@ -22,6 +23,21 @@ namespace e_Factura
         public Factura CrearFactura()
         {
             Colores.Titulo("\n--- CREAR NUEVA FACTURA ---");
+            // ⚠️ Verificar si hay una factura en proceso sin guardar
+            if (facturaEnProceso != null)
+            {
+                Colores.Error("\n⚠️ Ya existe una factura en proceso.");
+                Console.WriteLine("¿Desea descartarla y crear una nueva? (s/n): ");
+                string respuesta = Console.ReadLine()?.ToLower();
+
+                if (respuesta != "s")
+                {
+                    Colores.Info("Operación cancelada. Continuando con la factura actual.");
+                    return facturaEnProceso;
+                }
+
+                Colores.Info("Factura anterior descartada.");
+            }
 
             Console.Write("Nombre del cliente: ");
             string nombre = Console.ReadLine();
@@ -86,67 +102,194 @@ namespace e_Factura
             }
 
             Factura factura = new Factura(numeroFacturaActual++, cliente);
-            facturas.Add(factura);
+            facturaEnProceso = factura;
 
             Colores.Exito("Factura creada correctamente.");
             return factura;
 
         }
-        
+
         // =============================
         // 2. Agregar productos
         // =============================
-        public void AgregarProducto(Factura factura)
+        public void AgregarProducto(Factura factura = null)
         {
-            Colores.Titulo("\n--- AGREGAR PRODUCTO ---");
-
-            Console.Write("Código: ");
-            string codigo = Console.ReadLine();
-
-            // Evitar items duplicados
-            if (factura.Items.Any(i => i.Codigo == codigo))
-                throw new ItemDuplicadoException();
-
-            Console.Write("Descripción: ");
-            string descripcion = Console.ReadLine();
-
-            // Precio
-            decimal precio;
-            do
+            if (facturaEnProceso == null)
             {
-                Console.Write("Precio: ");
-            } while (!decimal.TryParse(Console.ReadLine(), out precio));
-
-            // Cantidad
-            int cantidad;
-            do
-            {
-                Console.Write("Cantidad: ");
-            } while (!int.TryParse(Console.ReadLine(), out cantidad));
-
-            // ITBIS
-            bool aplicaItbis = false;
-            while (true)
-            {
-                Console.Write("Aplica ITBIS (s/n): ");
-                string op = Console.ReadLine().ToLower();
-
-                if (op == "s") { aplicaItbis = true; break; }
-                if (op == "n") { aplicaItbis = false; break; }
-
-                Colores.Error("Debe escribir 's' o 'n'.");
+                Colores.Error("\n❌ No hay factura en proceso.");
+                Colores.Info("Debe crear una factura nueva primero (Opción 1).");
+                return;
             }
 
-            factura.Items.Add(new ItemFactura(codigo, descripcion, precio, cantidad, aplicaItbis));
 
-            Colores.Exito("Producto agregado exitosamente.");
+            Colores.Titulo("\n--- AGREGAR PRODUCTO ---");
+
+            try
+            {
+                Console.Write("Código: ");
+                string codigo = Console.ReadLine();
+
+                var itemExistente = facturaEnProceso.Items.FirstOrDefault(i => i.Codigo == codigo);
+
+                // Si existe, lanzar la excepción
+                if (itemExistente != null)
+                    throw new ItemDuplicadoException(itemExistente);
+
+                // Si no existe, continuar con el proceso normal de agregar
+                Console.Write("Descripción: ");
+                string descripcion = Console.ReadLine();
+
+                // Precio
+                decimal precio;
+                do
+                {
+                    Console.Write("Precio: ");
+                } while (!decimal.TryParse(Console.ReadLine(), out precio) || precio <= 0);
+
+                // Cantidad
+                int cantidad;
+                do
+                {
+                    Console.Write("Cantidad: ");
+                } while (!int.TryParse(Console.ReadLine(), out cantidad) || cantidad <= 0);
+
+                // ITBIS
+                bool aplicaItbis = false;
+                while (true)
+                {
+                    Console.Write("Aplica ITBIS (s/n): ");
+                    string op = Console.ReadLine()?.ToLower();
+
+                    if (op == "s") { aplicaItbis = true; break; }
+                    if (op == "n") { aplicaItbis = false; break; }
+
+                    Colores.Error("Debe escribir 's' o 'n'.");
+                }
+
+                facturaEnProceso.Items.Add(new ItemFactura(codigo, descripcion, precio, cantidad, aplicaItbis));
+
+                Colores.Exito("✓ Producto agregado exitosamente.");
+            }
+            catch (ItemDuplicadoException ex)
+            {
+                // Capturar la excepción y manejarla
+                Colores.Error($"\n⚠️ {ex.Message}");
+
+                // Obtener el item desde la excepción
+                var itemExistente = ex.ItemDuplicado;
+
+                if (itemExistente != null)
+                {
+                    Console.WriteLine($"\n   Producto: {itemExistente.Descripcion}");
+                    Console.WriteLine($"   Código: {itemExistente.Codigo}");
+                    Console.WriteLine($"   Cantidad actual: {itemExistente.Cantidad}");
+                    Console.WriteLine($"   Precio actual: {itemExistente.Precio:C}");
+                    Console.WriteLine($"   ITBIS actual: {(itemExistente.AplicaITBIS ? "Sí" : "No")}");
+
+                    Console.WriteLine("\n¿Qué desea hacer?");
+                    Console.WriteLine("1. Modificar el producto existente");
+                    Console.WriteLine("2. Incrementar solo la cantidad");
+                    Console.WriteLine("3. Cancelar y volver al menú");
+                    Console.Write("\nSeleccione una opción: ");
+
+                    string opcion = Console.ReadLine();
+
+                    switch (opcion)
+                    {
+                        case "1":
+                            ModificarProducto(itemExistente);
+                            break;
+                        case "2":
+                            IncrementarCantidad(itemExistente);
+                            break;
+                        case "3":
+                            Colores.Info("Operación cancelada.");
+                            break;
+                        default:
+                            Colores.Error("Opción inválida. Operación cancelada.");
+                            break;
+                    }
+                }
+            }
+        }
+        // =============================
+        // Método auxiliar: Modificar producto existente
+        // =============================
+        private void ModificarProducto(ItemFactura item)
+        {
+            Colores.Titulo("\n--- MODIFICAR PRODUCTO ---");
+            Console.WriteLine($"Producto: {item.Descripcion} (Código: {item.Codigo})");
+            Console.WriteLine("\nDeje en blanco para mantener el valor actual.\n");
+
+            // Modificar Descripción
+            Console.Write($"Nueva descripción [{item.Descripcion}]: ");
+            string nuevaDescripcion = Console.ReadLine();
+            if (!string.IsNullOrWhiteSpace(nuevaDescripcion))
+                item.Descripcion = nuevaDescripcion;
+
+            // Modificar Precio
+            Console.Write($"Nuevo precio [{item.Precio:C}]: ");
+            string precioInput = Console.ReadLine();
+            if (!string.IsNullOrWhiteSpace(precioInput) && decimal.TryParse(precioInput, out decimal nuevoPrecio) && nuevoPrecio > 0)
+                item.Precio = nuevoPrecio;
+
+            // Modificar Cantidad
+            Console.Write($"Nueva cantidad [{item.Cantidad}]: ");
+            string cantidadInput = Console.ReadLine();
+            if (!string.IsNullOrWhiteSpace(cantidadInput) && int.TryParse(cantidadInput, out int nuevaCantidad) && nuevaCantidad > 0)
+                item.Cantidad = nuevaCantidad;
+
+            // Modificar ITBIS
+            Console.Write($"Aplica ITBIS (s/n) [Actual: {(item.AplicaITBIS ? "Sí" : "No")}]: ");
+            string itbisInput = Console.ReadLine()?.ToLower();
+            if (itbisInput == "s")
+                item.AplicaITBIS = true;
+            else if (itbisInput == "n")
+                item.AplicaITBIS = false;
+
+            Colores.Exito("\n✓ Producto modificado exitosamente.");
+            Console.WriteLine($"\nResumen actualizado:");
+            Console.WriteLine($"  Descripción: {item.Descripcion}");
+            Console.WriteLine($"  Precio: {item.Precio:C}");
+            Console.WriteLine($"  Cantidad: {item.Cantidad}");
+            Console.WriteLine($"  ITBIS: {(item.AplicaITBIS ? "Sí" : "No")}");
+            Console.WriteLine($"  Total: {(item.Precio * item.Cantidad):C}");
+        }
+
+        // =============================
+        // Método auxiliar: Incrementar cantidad
+        // =============================
+        private void IncrementarCantidad(ItemFactura item)
+        {
+            Colores.Titulo("\n--- INCREMENTAR CANTIDAD ---");
+            Console.WriteLine($"Producto: {item.Descripcion}");
+            Console.WriteLine($"Cantidad actual: {item.Cantidad}");
+
+            int cantidadAdicional;
+            do
+            {
+                Console.Write("Cantidad a agregar: ");
+            } while (!int.TryParse(Console.ReadLine(), out cantidadAdicional) || cantidadAdicional <= 0);
+
+            int cantidadAnterior = item.Cantidad;
+            item.Cantidad += cantidadAdicional;
+
+            Colores.Exito($"\n✓ Cantidad actualizada: {cantidadAnterior} → {item.Cantidad}");
+            Console.WriteLine($"Total del producto: {(item.Precio * item.Cantidad):C}");
         }
 
         // =============================
         // 3. Aplicar descuento
         // =============================
-        public void AplicarDescuento(Factura factura)
+        public void AplicarDescuento()
         {
+            if (facturaEnProceso == null)
+            {
+                Colores.Error("\n❌ No hay factura en proceso.");
+                Colores.Info("Debe crear una factura nueva primero (Opción 1).");
+                return;
+            }
+
             Colores.Titulo("\n--- APLICAR DESCUENTO ---");
 
             decimal descuento;
@@ -155,7 +298,7 @@ namespace e_Factura
                 Console.Write("Porcentaje de descuento: ");
             } while (!decimal.TryParse(Console.ReadLine(), out descuento));
 
-            factura.PorcentajeDescuento = descuento;
+            facturaEnProceso.PorcentajeDescuento = descuento;
 
             Colores.Exito("Descuento aplicado.");
         }
@@ -163,47 +306,60 @@ namespace e_Factura
         // =============================
         // 4. Calcular totales
         // =============================
-        public void CalcularTotales(Factura factura)
+        public void CalcularTotales()
         {
+            if (facturaEnProceso == null)
+            {
+                Colores.Error("\n❌ No hay factura en proceso.");
+                Colores.Info("Debe crear una factura nueva primero (Opción 1).");
+                return;
+            }
             // Mostrar NCF si existe
-            if (factura.NCF != null)
-                Console.WriteLine($"NCF: {factura.NCF.NumeroCompleto}");
+            if (facturaEnProceso.NCF != null)
+                Console.WriteLine($"NCF: {facturaEnProceso.NCF.NumeroCompleto}");
             else
                 Console.WriteLine("NCF: (No asignado)");
 
             // Mostrar RNC o Cédula del cliente
-           if (!string.IsNullOrEmpty(factura.Cliente.RncCedula))
-                Console.WriteLine($"RNC/Cédula: {factura.Cliente.RncCedula}");
+           if (!string.IsNullOrEmpty(facturaEnProceso.Cliente.RncCedula))
+                Console.WriteLine($"RNC/Cédula: {facturaEnProceso.Cliente.RncCedula}");
            else
                Console.WriteLine("RNC/Cédula: (No aplica)");
 
-            Console.WriteLine($"\nCliente: {factura.Cliente.Nombre}");
+            Console.WriteLine($"\nCliente: {facturaEnProceso.Cliente.Nombre}");
 
             // Mostrar productos de la factura
             Console.WriteLine(
                     "-  Descripcion  |  Cantidad  |  Precio  |  Subotal  |  ITBIS  |  Total  "
                 );
-            foreach (var item in factura.Items)
+            foreach (var item in facturaEnProceso.Items)
             {
                 Console.WriteLine(
-                    $"- {item.Descripcion} |  {item.Cantidad} | " + $" RD{item.Precio:C} | RD{(item.Precio * item.Cantidad):C} " +
-                    $"| RD{item.ITBIS:C} | RD{item.Total:C}"
+                    $"-  {item.Descripcion}  |  {item.Cantidad}  |  RD{item.Precio:C}  |  RD{(item.Precio * item.Cantidad):C} " +
+                    $" |  RD{item.ITBIS:C}  |  RD{item.Total:C}"
                 );
             }
 
-            // Totales
-            //Console.WriteLine("\nResumen de Totales:");
-            //Console.WriteLine($"Subtotal: RD{factura.Subtotal:C}");
-            Console.WriteLine($"ITBIS: RD{factura.TotalITBIS:C}");
-            Console.WriteLine($"Descuento: RD{factura.Descuento:C}");
-            Console.WriteLine($"TOTAL A PAGAR: RD{factura.Total:C}");
+            Console.WriteLine($"ITBIS: RD{facturaEnProceso.TotalITBIS:C}");
+            Console.WriteLine($"Descuento: RD{facturaEnProceso.Descuento:C}");
+            Console.WriteLine($"TOTAL A PAGAR: RD{facturaEnProceso.Total:C}");
         }
 
         // =============================
         // 5. Generar NCF
         // =============================
-        public void GenerarNCF(Factura factura)
+        public void GenerarNCF()
         {
+            if (facturaEnProceso == null)
+            {
+                Colores.Error("\n❌ No hay factura en proceso.");
+                Colores.Info("Debe crear una factura nueva primero (Opción 1).");
+                return;
+            }
+
+            if (facturaEnProceso.NCF != null)
+               throw new NCFAsignadoException();
+
             Colores.Titulo("\n--- GENERAR NCF ---");
 
             int tipo;
@@ -228,18 +384,42 @@ namespace e_Factura
                 _ => 0
             };
 
-            factura.NCF = new NCF(tipoNCF, secuencia);
+            facturaEnProceso.NCF = new NCF(tipoNCF, secuencia);
 
-            Colores.Exito($"NCF generado: {factura.NCF.NumeroCompleto}");
+            Colores.Exito($"NCF generado: {facturaEnProceso.NCF.NumeroCompleto}");
         }
 
         // =============================
         // 6. Guardar factura
         // =============================
-        public void GuardarFactura(Factura factura)
+        public void GuardarFactura()
         {
+            if (facturaEnProceso == null)
+            {
+                Colores.Error("\n❌ No hay factura en proceso para guardar.");
+                return;
+            }
+
+            if (!facturaEnProceso.Items.Any())
+            {
+                Colores.Error("\n❌ No se puede guardar una factura sin productos.");
+                return;
+            }
             Colores.Exito("\nFactura guardada correctamente (simulado).");
             
+            facturas.Add(facturaEnProceso);
+
+            Colores.Exito($"\n✓ Factura #{facturaEnProceso.NumeroFactura} guardada correctamente.");
+            Colores.Info($"  Cliente: {facturaEnProceso.Cliente.Nombre}");
+            Colores.Info($"  Total: {facturaEnProceso.Total:C}");
+            Colores.Info($"  Productos: {facturaEnProceso.Items.Count}");
+
+            if (facturaEnProceso.NCF != null)
+                Colores.Info($"  NCF: {facturaEnProceso.NCF.NumeroCompleto}");
+
+            facturaEnProceso = null; // Limpiar
+
+            Colores.Error("\n⚠️ Para trabajar con otra factura, cree una nueva (Opción 1).");
         }
 
         // =============================

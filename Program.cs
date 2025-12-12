@@ -44,53 +44,42 @@ namespace e_Factura
                     switch (opcion)
                     {
                         case 1:
-                            facturaActual = acciones.CrearFactura();
+                             acciones.CrearFactura();
                             break;
 
                         case 2:
-                            if (facturaActual == null)
-                                Colores.Error("Debe crear una factura primero.");
-                            else
-                                acciones.AgregarProducto(facturaActual);
+                                acciones.AgregarProducto();
                             break;
 
                         case 3:
-                            if (facturaActual == null)
-                                Colores.Error("Debe crear una factura primero.");
-                            else
-                                acciones.AplicarDescuento(facturaActual);
+                                acciones.AplicarDescuento();
                             break;
 
                         case 4:
-                            if (facturaActual == null)
-                                Colores.Error("Debe crear una factura primero.");
-                            else
-                                acciones.CalcularTotales(facturaActual);
+                                acciones.CalcularTotales();
                             break;
 
                         case 5:
-                            if (facturaActual == null)
-                                Colores.Error("Debe crear una factura primero.");
-                            else
-                                acciones.GenerarNCF(facturaActual);
+                                acciones.GenerarNCF();
                             break;
 
                         case 6:
-                            if (facturaActual == null)
-                                Colores.Error("Debe crear una factura primero.");
-                            else
-                                acciones.GuardarFactura(facturaActual);
-                            facturaActual = null;
+                                acciones.GuardarFactura();
                             break;
 
                         case 7:
                             var encontrada = acciones.BuscarFactura();
-                            if (encontrada == null)
-                                Colores.Error("No existe esa factura.");
-                            else
+                            if (encontrada != null)
                             {
-                                Colores.Exito("Factura encontrada:");
-                                acciones.CalcularTotales(encontrada);
+                                Colores.Exito("\n✓ Factura encontrada:");
+                                // Mostrar información básica
+                                Console.WriteLine($"  Número: #{encontrada.NumeroFactura}");
+                                Console.WriteLine($"  Cliente: {encontrada.Cliente.Nombre}");
+                                Console.WriteLine($"  Fecha: {encontrada.Fecha:dd/MM/yyyy HH:mm}");
+                                Console.WriteLine($"  Total: {encontrada.Total:C}");
+                                Console.WriteLine($"  Productos: {encontrada.Items.Count}");
+                                if (encontrada.NCF != null)
+                                    Console.WriteLine($"  NCF: {encontrada.NCF.NumeroCompleto}");
                             }
                             break;
 
