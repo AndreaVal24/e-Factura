@@ -17,9 +17,9 @@ namespace e_Factura
 
         public decimal Descuento {  get; set; }
         // Propiedades calculadas
+
         public decimal Subtotal => Items.Sum(i => i.Subtotal); // Suma de los subtotales de los items
         public decimal TotalITBIS => Items.Sum(i => i.ITBIS);// Suma del ITBIS de los items
-        //public decimal Descuento => Subtotal * (PorcentajeDescuento / 100);// Calculo del descuento
         public decimal Total => Subtotal + TotalITBIS - Descuento;// Calculo del total de la factura
 
         // Constructor

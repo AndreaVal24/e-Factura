@@ -465,6 +465,7 @@ namespace e_Factura
         {
             Colores.Titulo("\n--- REPORTE DEL DÍA ---");
 
+            //uso de linq para filtrar y proyectar
             var resumen = facturas
                 .Where(f => f.Fecha.Date == DateTime.Now.Date)
                 .Select(f => new
@@ -481,7 +482,7 @@ namespace e_Factura
                 Colores.Info("No hay facturas en el día de hoy.");
                 return;
             }
-
+            //foreach para mostrar el resumen
             foreach (var f in resumen)
                 Console.WriteLine($"Factura {f.NumeroFactura} - Cliente: {f.Cliente} - Productos: {f.Count} - Total: {f.Total:C}");
         }
