@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace e_Factura
 {
-    // Clase para representar un numero de comprobante fiscal (NCF)
+    //TODO Clase para representar un numero de comprobante fiscal (NCF)
     public class NCF
     {
         public TipoNCF Tipo { get; set; }
@@ -22,7 +22,7 @@ namespace e_Factura
             FechaEmision = DateTime.Now;
         }
 
-        // Metodo privado para obtener el prefijo segun el tipo de NCF
+        //TODO Metodo privado para obtener el prefijo segun el tipo de NCF
         private string GetPrefijoTipo()
         {
             return Tipo switch

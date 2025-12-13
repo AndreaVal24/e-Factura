@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace e_Factura
 {
+    //TODO Extensiones
     //debe ser estatic para usarse como extension
     public static class Extensiones
     {

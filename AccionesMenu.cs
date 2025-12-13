@@ -12,7 +12,7 @@ namespace e_Factura
         private int numeroFacturaActual = 1;
         public Factura facturaEnProceso { get; private set; }
 
-        // Secuencias NCF simuladas
+        //TODO Secuencias NCF simuladas
         private long secuenciaB01 = 1;
         private long secuenciaB02 = 1;
         private long secuenciaB14 = 1;
@@ -375,7 +375,7 @@ namespace e_Factura
                 3 => TipoNCF.Gubernamental,
                 _ => TipoNCF.ConsumidorFinal
             };
-
+            //TODO Generar NCF con formato secuencial: B0100000001.
             long secuencia = tipoNCF switch
             {
                 TipoNCF.CreditoFiscal => secuenciaB01++,
@@ -465,6 +465,7 @@ namespace e_Factura
         {
             Colores.Titulo("\n--- REPORTE DEL DÍA ---");
 
+            //TODO uso de linq para filtrar y proyectar
             var resumen = facturas
                 .Where(f => f.Fecha.Date == DateTime.Now.Date)
                 .Select(f => new
